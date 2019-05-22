@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("SimCenter");
     QCoreApplication::setApplicationVersion("1.0.0");
 
-    GoogleAnalytics::SetTrackingId("UA-126256136-1");
+    //    GoogleAnalytics::SetTrackingId("UA-126256136-1");
     GoogleAnalytics::StartSession();
     GoogleAnalytics::ReportStart();
 
@@ -85,8 +85,9 @@ int main(int argc, char *argv[])
 
   QString tenant("designsafe");
   QString storage("agave://designsafe.storage.default/");
+  QString dirName("GMT-UQ");
 
-  AgaveCurl *theRemoteService = new AgaveCurl(tenant, storage);
+  AgaveCurl *theRemoteService = new AgaveCurl(tenant, storage, &dirName);
 
 
   //
