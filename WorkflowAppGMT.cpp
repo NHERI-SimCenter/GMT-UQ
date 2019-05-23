@@ -323,6 +323,7 @@ WorkflowAppGMT::selectionChangedSlot(const QItemSelection & /*newSelection*/, co
 
 bool
 WorkflowAppGMT::outputToJSON(QJsonObject &jsonObjectTop) {
+
     //
     // get each of the main widgets to output themselves
     //
@@ -339,6 +340,21 @@ WorkflowAppGMT::outputToJSON(QJsonObject &jsonObjectTop) {
     theUQ_Method->outputToJSON(jsonObjectUQ);
     jsonObjectTop["UQ_Method"] = jsonObjectUQ;
 
+    QJsonObject jsonObjectEDP;
+    QJsonObject dataObjEDP;
+    jsonObjectEDP["ApplicationData"] = dataObjEDP;
+    jsonObjectEDP["Application"] = "StandardGMT_EDP",
+    apps["EDP"] = jsonObjectEDP;
+
+    QJsonObject jsonObjectSIM;
+    QJsonObject dataObjSIM;
+    jsonObjectSIM["ApplicationData"] = dataObjSIM;
+    jsonObjectSIM["Application"] = "ExtractPGA",
+    apps["Simulation"] = jsonObjectSIM;
+
+    theUQ_Method->outputToJSON(jsonObjectUQ);
+    jsonObjectTop["UQ_Method"] = jsonObjectUQ;
+
     QJsonObject appsUQ;
     theUQ_Method->outputAppDataToJSON(appsUQ);
     apps["UQ"]=appsUQ;
@@ -349,20 +365,24 @@ WorkflowAppGMT::outputToJSON(QJsonObject &jsonObjectTop) {
 
     theRunWidget->outputToJSON(jsonObjectTop);
     jsonObjectTop["Applications"]=apps;
-    
+
+    QJsonObject jsonObjectRESULTS;
+    QJsonArray resultFiles;
+    resultFiles.append(QJsonValue("EVENT.json"));
+    jsonObjectTop["ResultFiles"] = resultFiles;
+
     return true;
 }
 
 
 void
 WorkflowAppGMT::processResults(QString dakotaOut, QString dakotaTab, QString inputFile) {
-
-
-   theResults->processResults(dakotaOut, dakotaTab, inputFile);
-   theRunWidget->hide();
-   treeView->setCurrentIndex(infoItemIdx);
-   theStackedWidget->setCurrentIndex(3);
- }
+  emit statusMessage("Processing Results ...");
+  theResults->processResults(dakotaOut, dakotaTab, inputFile);
+  theRunWidget->hide();
+  treeView->setCurrentIndex(infoItemIdx);
+  theStackedWidget->setCurrentIndex(3);
+}
 
 void
 WorkflowAppGMT::clear(void)
@@ -522,7 +542,6 @@ WorkflowAppGMT::setUpForApplicationRun(QString &workingDir, QString &subDir) {
     json["runDir"]=tmpDirectory;
     json["WorkflowType"]="Building Simulation";
 
-
     QJsonDocument doc(json);
     file.write(doc.toJson());
     file.close();
@@ -564,7 +583,6 @@ WorkflowAppGMT::loadFile(const QString fileName){
 
     this->clear();
     this->inputFromJSON(jsonObj);
-
 }
 
 
