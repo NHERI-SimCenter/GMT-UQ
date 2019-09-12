@@ -1,4 +1,4 @@
-int CentralDifference(double mass,
+double CentralDifference(double mass,
                       double damping,
                       double stiffness,
                       double disp_init,
@@ -7,7 +7,7 @@ int CentralDifference(double mass,
                       const std::vector<double> &force_hist,
                       std::vector<double> &disps);
 
-int Newmark(double mass,
+double Newmark(double mass,
             double damping,
             double stiffness,
             double disp_init,
@@ -18,7 +18,7 @@ int Newmark(double mass,
             const std::vector<double> &force_hist,
             std::vector<double> &disps);
 
-int LinearInterpolation(double natural_freq,
+double LinearInterpolation(double natural_freq,
                         double damping_ratio,
                         double disp_init,
                         double vel_init,

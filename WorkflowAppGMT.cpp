@@ -147,7 +147,27 @@ WorkflowAppGMT::WorkflowAppGMT(RemoteService *theService, QWidget *parent)
     connect(remoteApp,SIGNAL(sendStatusMessage(QString)), this,SLOT(statusMessage(QString)));
     connect(remoteApp,SIGNAL(sendFatalMessage(QString)), this,SLOT(fatalMessage(QString)));
 
+    connect(localApp, &Application::setupForRun, this, [this](QString &workingDir, QString &subDir)
+    {
+        currentApp = localApp;
+        setUpForApplicationRun(workingDir, subDir);
+    });
 
+    connect(this,SIGNAL(setUpForApplicationRunDone(QString&, QString &)), theRunWidget, SLOT(setupForRunApplicationDone(QString&, QString &)));
+    connect(localApp,SIGNAL(processResults(QString, QString, QString)), this, SLOT(processResults(QString, QString, QString)));
+
+    connect(remoteApp, &Application::setupForRun, this, [this](QString &workingDir, QString &subDir)
+    {
+        currentApp = remoteApp;
+        setUpForApplicationRun(workingDir, subDir);
+    });
+
+    connect(theJobManager,SIGNAL(processResults(QString , QString, QString)), this, SLOT(processResults(QString, QString, QString)));
+    connect(theJobManager,SIGNAL(loadFile(QString)), this, SLOT(loadFile(QString)));
+
+    connect(remoteApp,SIGNAL(successfullJobStart()), theRunWidget, SLOT(hide()));
+
+    /*
     connect(localApp,SIGNAL(setupForRun(QString &,QString &)), this, SLOT(setUpForApplicationRun(QString &,QString &)));
     connect(this,SIGNAL(setUpForApplicationRunDone(QString&, QString &)), theRunWidget, SLOT(setupForRunApplicationDone(QString&, QString &)));
 
@@ -165,6 +185,7 @@ WorkflowAppGMT::WorkflowAppGMT(RemoteService *theService, QWidget *parent)
     connect(theJobManager,SIGNAL(loadFile(QString)), this, SLOT(loadFile(QString)));
 
     connect(remoteApp,SIGNAL(successfullJobStart()), theRunWidget, SLOT(hide()));
+    */
 
     //connect(theRunLocalWidget, SIGNAL(runButtonPressed(QString, QString)), this, SLOT(runLocal(QString, QString)));
 
@@ -235,7 +256,6 @@ WorkflowAppGMT::WorkflowAppGMT(RemoteService *theService, QWidget *parent)
     }
     else
         qDebug() << "Open Style File Failed!";
-
 
 
     //
@@ -429,6 +449,9 @@ WorkflowAppGMT::inputFromJSON(QJsonObject &jsonObject)
 
 
         if (theApplicationObject.contains("UQ")) {
+
+
+
             QJsonObject theObject = theApplicationObject["UQ"].toObject();
             theUQ_Method->inputAppDataFromJSON(theObject);
         } else {
@@ -442,13 +465,13 @@ WorkflowAppGMT::inputFromJSON(QJsonObject &jsonObject)
     theRVs->inputFromJSON(jsonObject);
     theRunWidget->inputFromJSON(jsonObject);
 
-
     return true;
 }
 
 
 void
 WorkflowAppGMT::onRunButtonClicked() {
+    qDebug() << "WorkflowAppGMT :: onRunButtonClicked";
     theRunWidget->showLocalApplication();
     GoogleAnalytics::ReportLocalRun();
 }
@@ -496,7 +519,7 @@ WorkflowAppGMT::onExitButtonClicked(){
 
 void
 WorkflowAppGMT::setUpForApplicationRun(QString &workingDir, QString &subDir) {
-
+    qDebug() << "WorkflowAppGMT::setUpForApplicationRun .. start";
     errorMessage("");
 
     //

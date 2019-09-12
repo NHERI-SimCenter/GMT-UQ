@@ -90,12 +90,12 @@ RunWidget::inputFromJSON(QJsonObject &jsonObject){
     return theCurrentApplication->inputFromJSON(jsonObject);
 }
 
-
 void
 RunWidget::showLocalApplication(void) {
     theStackedWidget->setCurrentIndex(0);
     theCurrentApplication = localApp;
     this->show();
+    theCurrentApplication->displayed();
 }
 
 
@@ -104,10 +104,12 @@ RunWidget::showRemoteApplication(void) {
     int numTasks = getNumParallelTasks();
     remoteApp->setNumTasks(numTasks);
 
-    theStackedWidget->setCurrentIndex(1);    
+    theStackedWidget->setCurrentIndex(1);
     theCurrentApplication = remoteApp;
     this->show();
+    theCurrentApplication->displayed();
 }
+
 
 void
 RunWidget::setupForRunApplicationDone(QString &tmpDirectory, QString &inputFile) {

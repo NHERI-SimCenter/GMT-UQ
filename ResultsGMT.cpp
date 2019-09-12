@@ -70,8 +70,27 @@ using namespace QtCharts;
 #include <QValueAxis>
 #include <QXYSeries>
 #include <QLabel>
+#include <QDirIterator>
+#include <QFileInfo>
+
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <EarthquakeRecord.h>
+
+#include <ResponseWidget.h>
+#include <timeIntegrators.h>
+
+int CalcResponseSpectrum(const QVector<double> &periods,
+                         double dampingRatio,
+                         const char *integrator,
+                         const std::vector<double> &groundMotion,
+                         double time_step,
+                         QVector<double> &dispResponse,
+                         QVector<double> &accelResponse);
 
 #define NUM_DIVISIONS 10
+
 
 ResultsGMT::ResultsGMT(QWidget *parent)
     : SimCenterAppWidget(parent)
@@ -309,11 +328,11 @@ ResultsGMT::inputFromJSON(QJsonObject &jsonObject)
     // add 3 Widgets to TabWidget
     //
 
-    tabWidget->addTab(summary,tr("Summary"));
-    tabWidget->addTab(dakotaText, tr("General"));
-    tabWidget->addTab(widget, tr("Data Values"));
-
+    tabWidget->addTab(theGraphic, tr("Response Spectrum"));
+    tabWidget->addTab(summary,tr("Summary PGA"));
+    tabWidget->addTab(widget, tr("PGA Values"));
     tabWidget->adjustSize();
+
     return result;
 }
 
@@ -369,7 +388,10 @@ static int mergesort(double *input, int size)
 
 int ResultsGMT::processResults(QString filenameResults, QString filenameTab, QString inputFile) {
 
+    qDebug() << "Processing Results.." << filenameTab;
+
     this->clear();
+
     mLeft = true;
     col1 = 0;
     col2 = 0;
@@ -377,6 +399,9 @@ int ResultsGMT::processResults(QString filenameResults, QString filenameTab, QSt
     //
     // get a Qwidget ready to place summary data, the EDP name, mean, stdDev into
     //
+    QString xLabel("Period");
+    QString yLabel("Displacement");
+    theGraphic = new ResponseWidget(xLabel, yLabel);
 
     QWidget *summaryWidget = new QWidget();
     QVBoxLayout *summaryLayout = new QVBoxLayout();
@@ -612,14 +637,28 @@ int ResultsGMT::processResults(QString filenameResults, QString filenameTab, QSt
     //
     // add summary, detained info and spreadsheet with chart to the tabed widget
     //
-
+    // fmk THIS ONE
     tabWidget->addTab(summary,tr("Summary"));
-    tabWidget->addTab(dakotaText, tr("General"));
-    tabWidget->addTab(widget, tr("Data Values"));
+    tabWidget->addTab(theGraphic, tr("Respose Spectrum"));
+    tabWidget->addTab(widget, tr("PGA"));
 
     tabWidget->adjustSize();
 
     emit sendErrorMessage(tr(""));
+
+    qDebug() << "looking at Results dir";
+    QFileInfo tabFile(filenameTab);
+
+    //QString fileDirectory = workDir.absoluteFilePath(filenameTab);
+    QString resultsDirectory = tabFile.dir().absolutePath() + QDir::separator() + QString("Results");
+    qDebug() << "looking at Results dir" << resultsDirectory;
+
+    QDirIterator it(resultsDirectory, QStringList() << "*.json");
+    while (it.hasNext()) {
+         QString resultFile = it.next();
+         this->addEarthquakeMotion(resultFile);
+    }
+
 
     return 0;
 }
@@ -899,4 +938,122 @@ ResultsGMT::createResultEDPWidget(QString &name, double mean, double stdDev, int
     edpLayout->addStretch();
 
     return edp;
+}
+
+void
+ResultsGMT::addEarthquakeMotion(QString &name) {
+
+    //
+    // open event file, obtain json object, read into an earthquake record, obtain response spectrum
+    //
+
+    currentMethod = "LinearInterpolation";
+
+
+    QFile file(name);
+    if(file.open(QFile::ReadOnly)) {
+        QString jsonText = QLatin1String(file.readAll());
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonText.toUtf8());
+        QJsonObject jsonObj = jsonDoc.object();
+        //EarthquakeRecord *theMotion = new EarthquakeRecord();
+        //theMotion->inputFromJSON(jsonObj);
+        // get dT, return error if not there
+        QJsonValue theEvent = jsonObj["Events"];
+        if (theEvent.isNull() || theEvent.isUndefined()) {
+            return;
+        }
+        QJsonArray eventsArray = theEvent.toArray();
+        foreach (const QJsonValue &eventValue, eventsArray) {
+            QJsonObject eventObj = eventValue.toObject();
+            QJsonValue theValue = eventObj["dT"];
+            if (theValue.isNull() || theValue.isUndefined()) {
+                return;
+            }
+            double dT=theValue.toDouble();
+            theValue = eventObj["numSteps"];
+            if (theValue.isNull() || theValue.isUndefined()) {
+                return;
+            }
+            int numSteps =theValue.toInt();
+            qDebug() << numSteps << " " << dT;
+
+            theValue = eventObj["pattern"];
+            if (theValue.isNull() || theValue.isUndefined()) {
+                qDebug() << QString("ERROR: addEarthquakeMotion - no pattern");
+                return;
+            }
+            QJsonArray patternsArray = theValue.toArray();
+            foreach (const QJsonValue &pattern, patternsArray) {
+                const QJsonObject patternObj = pattern.toObject();
+                theValue = patternObj["dof"];
+                if (theValue.isNull() || theValue.isUndefined()) {
+                    return;
+                }
+                int dof =theValue.toInt();
+                theValue = patternObj["timeSeries"];
+                if (theValue.isNull() || theValue.isUndefined()) {
+                    return;
+                }
+                QString patternTimeSeriesName =theValue.toString();
+                qDebug() << QString("dof timeSeries: ") << dof << " " << patternTimeSeriesName;
+
+                theValue = eventObj["timeSeries"];
+                if (theValue.isNull() || theValue.isUndefined()) {
+                    qDebug() << QString("ERROR: addEarthquakeMotion - no timeSeries");
+                    return;
+                }
+                QJsonArray timeSeriesArray = theValue.toArray();
+                foreach (const QJsonValue &timeSeriesValue, timeSeriesArray) {
+                    QJsonObject timeSeriesObj = timeSeriesValue.toObject();
+                    theValue = timeSeriesObj["name"];
+                    if (theValue.isNull() || theValue.isUndefined()) {
+                        qDebug() << QString("ERROR: addEarthquakeMotion - no timeSeries name");
+                        return;
+                    }
+                    QString timeSeriesName =theValue.toString();
+                    if (timeSeriesName == patternTimeSeriesName) {
+                        qDebug() << "FOUND IT";
+                        theValue = timeSeriesObj["data"];
+                        if (theValue.isNull() || theValue.isUndefined()) {
+                            qDebug() << QString("ERROR: addEarthquakeMotion - no data array");
+                            return;
+                        }
+                        std::vector<double> data(numSteps);
+                        QJsonArray dataArray = theValue.toArray();
+                        for (int i=0; i<numSteps; i++)
+                            data.push_back(dataArray.at(i).toDouble());
+
+                        QVector<double> periods;
+                        periods.append(0.1);
+                        periods.append(0.5);
+                        periods.append(1.0);
+                        periods.append(2.0);
+                        const char *integrator="LinearInterpolation";
+                        double dT = 0.01;
+                        double dampRatio = 0.0;
+                        QVector<double> dispResponse;
+                        QVector<double> accelResponse;
+
+                        CalcResponseSpectrum(periods,
+                                             dampRatio,
+                                             integrator,
+                                             data,
+                                             dT,
+                                             dispResponse,
+                                             accelResponse);
+
+                        qDebug() << "RESULT: " << dispResponse;
+                        theGraphic->addData(dispResponse, periods);
+                        //for (auto val : dispResponse) {qDebug() << "ONE " << val;}
+
+                        break;
+                    } else
+                        qDebug() << timeSeriesName << " " << patternTimeSeriesName;
+                }
+            }
+
+            qDebug() << numSteps << " " << dT;
+        }
+
+    }
 }

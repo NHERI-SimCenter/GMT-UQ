@@ -9,40 +9,22 @@
 #include <qcustomplot.h>
 
 
-ResponseWidget::ResponseWidget(MainWindow *mainWindow,
-                               int mainItem,
-                               QString &label,
+ResponseWidget::ResponseWidget(
                                QString &xLabel,
                                QString &yLabel,
                                QWidget *parent)
-    : QWidget(parent), theItem(0), mainWindowItem(mainItem), main(mainWindow)
+    : QWidget(parent), numGraphs(0)
 {
+    minValue = 0;
+    maxValue = 0;
+    xMinValue = 0;
+    xMaxValue = 0;
     // create a main layout
     QVBoxLayout *mainLayout = new QVBoxLayout();
 
 
-    //
-    // spin box
-    //
+    //connect(saveData, SIGNAL(pressed()), mainWindow, SLOT(saveData()));
 
-    dataSET = false;
-    theSpinBox = new QSpinBox();
-    theSpinBox->setMinimum(1);
-    theSpinBox->setMaximum(99);
-    theSpinBox->setMinimumWidth(100);
-    QHBoxLayout *theSpinLayout = new QHBoxLayout();
-    QLabel *spinLabel = new QLabel(label);
-    theSpinLayout->addWidget(spinLabel);
-    theSpinLayout->addWidget(theSpinBox);
-    theSpinLayout->addStretch();
-    QPushButton *saveData = new QPushButton(QString("Save Data"));
-    theSpinLayout->addWidget(saveData);
-
-
-    connect(theSpinBox,SIGNAL(valueChanged(int)), this, SLOT(itemEditChanged(int)));
-    connect(saveData, SIGNAL(pressed()), mainWindow, SLOT(saveData()));
-
-    mainLayout->addLayout(theSpinLayout);
 
     //
     // graphic window
@@ -72,34 +54,21 @@ ResponseWidget::~ResponseWidget()
 
 }
 
-int
-ResponseWidget::getItem() {
-    return theItem;
-}
-
 void
-ResponseWidget::setItem(int newItem) {
-    theItem = newItem;
-    theSpinBox->setValue(newItem);
-}
-
-void
-ResponseWidget::itemEditChanged(int theItem) {
-    if (dataSET == true)
-        main->setResponse(theItem, mainWindowItem);
+ResponseWidget::clear() {
+   thePlot->clearGraphs();
+    thePlot->clearPlottables();
+    numGraphs=0;
+    minValue = 0;
+    maxValue = 0;
+    xMinValue = 0;
+    xMaxValue = 0;
 }
 
 
+
 void
-ResponseWidget::setData(QVector<double> &data, QVector<double> &time, int numSteps, double dt, int index = -1) {
-
-    dataSET = false;
-    if (index != -1) {
-        theSpinBox->setSingleStep(1);
-        theSpinBox->setValue(index);
-
-    }
-    dataSET = true;
+ResponseWidget::addData(QVector<double> &data, QVector<double> &time, int numSteps, double dt) {
 
     if (time.size() != data.size()) {
         qDebug() << "ResponseWidget - setData vectors of differing sizes";
@@ -111,14 +80,11 @@ ResponseWidget::setData(QVector<double> &data, QVector<double> &time, int numSte
         return;
     }
 
-
-    thePlot->clearGraphs();
     graph = thePlot->addGraph();
+    thePlot->graph(numGraphs)->setData(time, data);
+    numGraphs++;
 
-    thePlot->graph(0)->setData(time, data);
 
-    double minValue = 0;
-    double maxValue = 0;
     for (int i=0; i<numSteps; i++) {
         double value = data.at(i);
         if (value < minValue)
@@ -136,27 +102,28 @@ ResponseWidget::setData(QVector<double> &data, QVector<double> &time, int numSte
 }
 
 void
-ResponseWidget::setData(QVector<double> &data, QVector<double> &x, int numSteps, int index) {
+ResponseWidget::addData(QVector<double> &data, QVector<double> &x) {
 
-    dataSET = false;
-    if (index != -1) {
-        theSpinBox->setRange(1, main->getNumFloors());
-        theSpinBox->setValue(index);
-    }
-    dataSET = true;
+    qDebug() << data.size();
+    qDebug() << x.size();
+    qDebug() << data;
+    qDebug() << x;
 
-    thePlot->clearGraphs();
+
+    /*
+     *
+     * thePlot->clearGraphs();
     thePlot->clearPlottables();
     curve = new QCPCurve(thePlot->xAxis, thePlot->yAxis);
 
     curve->setData(x,data);
+*/
+    graph = thePlot->addGraph();
+    thePlot->graph(numGraphs)->setData(x, data, true);
+    numGraphs++;
 
-    //thePlot->graph(0)->setData(x, data, true);
+    int numSteps = data.size();
 
-    double minValue = 0;
-    double maxValue = 0;
-    double xMinValue = 0;
-    double xMaxValue = 0;
     for (int i=0; i<numSteps; i++) {
         double value = data.at(i);
         double xValue = x.at(i);

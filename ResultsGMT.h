@@ -48,6 +48,7 @@ class QTextEdit;
 class QTabWidget;
 class MyTableWidget;
 class QVBoxLayout;
+class ResponseWidget;
 
 //class QChart;
 
@@ -72,6 +73,8 @@ public slots:
 
 private:
    void getColData(QVector<double> &data, int numRow, int col);
+   void addEarthquakeMotion(QString &filename);
+
    QVBoxLayout *layout;
 
    QTabWidget *tabWidget;
@@ -87,6 +90,10 @@ private:
    QVector<double>theMeans;
    QVector<double>theStdDevs;
    int dataType; // min/max or mean/stdDev
+
+   QString currentMethod;
+   ResponseWidget *theGraphic;
+
 };
 
 #endif // GMT_RESULTS_H

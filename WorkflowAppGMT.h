@@ -115,6 +115,8 @@ private:
     Application *localApp;
     Application *remoteApp;
     RemoteJobManager *theJobManager;
+    Application* currentApp;
+
 
     QModelIndex infoItemIdx;
     SimCenterWidget  *currentWidget;

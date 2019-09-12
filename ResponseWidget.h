@@ -23,34 +23,30 @@ class ResponseWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit ResponseWidget(MainWindow *main, int mainWindowItem, QString &label, QString &xAxis, QString &yAxis, QWidget *parent = 0);
+    explicit ResponseWidget(QString &xAxis, QString &yAxis, QWidget *parent = 0);
     ~ResponseWidget();
 
-    int getItem();
-    void setItem(int);
-    void setData(QVector<double> &data, QVector<double> &time, int numSteps, double dt, int index);
-    void setData(QVector<double> &data, QVector<double> &x, int numSteps, int index);
+    void clear();
+    void addData(QVector<double> &data, QVector<double> &time, int numSteps, double dt);
+    void addData(QVector<double> &data, QVector<double> &x);
 
 signals:
 
 public slots:
-    void itemEditChanged(int);
+
 
 
 private:
     QCustomPlot *thePlot;
-    QSpinBox *theSpinBox;
-
-    int theItem; // floor or story #
-
-    // 3 variables neeeded for call back .. need to go away!
-    int mainWindowItem; 
-    MainWindow *main;   
-    bool dataSET;
 
     QCPGraph *graph;
     QCPItemTracer *groupTracer;
     QCPCurve *curve;
+    int numGraphs;
+    double minValue;
+    double maxValue;
+    double xMinValue;
+    double xMaxValue;
 };
 
 #endif // NODERESPONSEWIDGET_H
