@@ -23,6 +23,7 @@ win32 {
 }
 
 include(../EE-UQ/EE-UQ.pri)
+include(../SimCenterCommon/Workflow/Workflow.pri)
 include(../SimCenterCommon/Common/Common.pri)
 include(../SimCenterCommon/RandomVariables/RandomVariables.pri)
 include(../SimCenterCommon/InputSheetBM/InputSheetBM.pri)
@@ -34,13 +35,20 @@ SOURCES += main.cpp \
     WorkflowAppGMT.cpp \
     ResultsGMT.cpp \
     LocationInformation.cpp \
-    RunWidget.cpp
+    RunWidget.cpp \
+    timeIntegrators.cpp \
+    calcResponseSpectrum.cpp \
+    qcustomplot.cpp \
+    ResponseWidget.cpp
 
 HEADERS  += \
     WorkflowAppGMT.h \
     ResultsGMT.h \
     LocationINformation.h \
-    RunWidget.h 
+    RunWidget.h \ 
+    timeIntegrators.h \
+    qcustomplot.h \
+    ResponseWidget.h
 
 RESOURCES += \
     #resources.qrc
